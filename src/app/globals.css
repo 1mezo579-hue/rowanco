@@ -97,6 +97,9 @@
 }
 
 @media print {
+  body {
+    background: white !important;
+  }
   body * {
     visibility: hidden;
   }
@@ -107,10 +110,14 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm;
+    width: 80mm !important;
+    max-width: 80mm !important;
     margin: 0;
-    padding: 10px;
-    color: black;
+    padding: 0;
+    color: black !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
   }
   .no-print {
     display: none !important;
