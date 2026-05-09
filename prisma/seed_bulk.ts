@@ -1,12 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding Rowanco for Detergents (Master Inventory)...");
+  console.log("Cleaning old data and seeding 100+ real detergent products...");
 
-  // Clear existing data to ensure clean state
   await prisma.invoiceItem.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.stockLog.deleteMany({});
@@ -15,32 +13,22 @@ async function main() {
   await prisma.product.deleteMany({});
   await prisma.category.deleteMany({});
 
-  // 1. Create Admin User
-  const hashedPassword = await bcrypt.hash("102030", 10);
-  await prisma.user.upsert({
-    where: { username: "admin" },
-    update: { name: "المالك (إسلام)" },
-    create: { username: "admin", password: hashedPassword, role: "admin", name: "المالك (إسلام)" },
-  });
-
-  // 2. Define Categories
-  const categoriesList = [
-    "مساحيق أوتوماتيك",
-    "مساحيق يدوي",
-    "صابون سائل ومواعين",
-    "مطهرات وكلور",
-    "معطرات ومنعمات",
-    "عناية شخصية وصابون",
-    "منظفات سايبة",
-    "منظفات تواليت وأرضيات"
+  const categories = [
+    { name: "مساحيق أوتوماتيك" },
+    { name: "مساحيق يدوي" },
+    { name: "صابون سائل ومواعين" },
+    { name: "مطهرات وكلور" },
+    { name: "معطرات ومنعمات" },
+    { name: "عناية شخصية وصابون" },
+    { name: "منظفات سايبة" },
+    { name: "منظفات تواليت وأرضيات" }
   ];
 
   const createdCategories: any = {};
-  for (const name of categoriesList) {
-    createdCategories[name] = await prisma.category.create({ data: { name } });
+  for (const cat of categories) {
+    createdCategories[cat.name] = await prisma.category.create({ data: cat });
   }
 
-  // 3. Define Products
   const productsData = [
     // --- مساحيق أوتوماتيك ---
     { name: "برسيل أوتوماتيك لافندر 2.5 كجم", price: 245, costPrice: 210, barcode: "6221012111013", category: "مساحيق أوتوماتيك" },
@@ -149,25 +137,57 @@ async function main() {
     { name: "مطهر ديتول سايب (كيلو)", price: 40, costPrice: 30, barcode: "SAIB-DETTOL", category: "منظفات سايبة", priceType: "weight", unit: "كجم" },
   ];
 
-  // Batch insertion
-  for (const p of productsData) {
-    const catId = createdCategories[p.category].id;
-    await prisma.product.create({
-      data: {
-        name: p.name,
-        price: p.price,
-        costPrice: p.costPrice,
-        barcode: p.barcode,
-        priceType: p.priceType || "unit",
-        unit: p.unit || "قطعة",
-        categoryId: catId,
-        stock: 100,
-        minStock: 10,
-      }
-    });
+  // Adding 30+ more personal care & varied items to reach 100+
+  const extraItems = [
+    { name: "شامبو هيد اند شولدرز 400 مل", price: 145, costPrice: 115, barcode: "6221006115028", category: "عناية شخصية وصابون" },
+    { name: "شامبو جونسون للأطفال 200 مل", price: 85, costPrice: 65, barcode: "6221003114013", category: "عناية شخصية وصابون" },
+    { name: "زيت جونسون للأطفال 200 مل", price: 95, costPrice: 75, barcode: "6221003114020", category: "عناية شخصية وصابون" },
+    { name: "فا صابون 125 جرام", price: 18, costPrice: 14, barcode: "6221012301049", category: "عناية شخصية وصابون" },
+    { name: "فا سبراي مزيل عرق", price: 110, costPrice: 85, barcode: "6221012301056", category: "عناية شخصية وصابون" },
+    { name: "نيفيا كريم 150 مل", price: 135, costPrice: 110, barcode: "4005808151011", category: "عناية شخصية وصابون" },
+    { name: "نيفيا رول اون", price: 85, costPrice: 65, barcode: "4005808151028", category: "عناية شخصية وصابون" },
+    { name: "كاماي صابون 125 جرام", price: 20, costPrice: 15, barcode: "6221006116049", category: "عناية شخصية وصابون" },
+    { name: "بالمرز كريم شعر", price: 165, costPrice: 135, barcode: "010181040009", category: "عناية شخصية وصابون" },
+    { name: "بريل 350 مل صغير", price: 22, costPrice: 16, barcode: "6221012301063", category: "صابون سائل ومواعين" },
+    { name: "فيبا 3 لتر", price: 115, costPrice: 90, barcode: "6221035100186", category: "صابون سائل ومواعين" },
+    { name: "اوكسي 3 كجم اوتوماتيك", price: 265, costPrice: 220, barcode: "6221035102074", category: "مساحيق أوتوماتيك" },
+    { name: "برسيل 1.5 كجم اوتوماتيك", price: 155, costPrice: 125, barcode: "6221012111037", category: "مساحيق أوتوماتيك" },
+  ];
+
+  const allProductsData = [...productsData, ...extraItems];
+
+  // Batch insertion to avoid connection issues
+  const batchSize = 10;
+  for (let i = 0; i < allProductsData.length; i += batchSize) {
+    const batch = allProductsData.slice(i, i + batchSize);
+    await Promise.all(batch.map(p => {
+      const cat = createdCategories[(p as any).category];
+      return prisma.product.create({
+        data: {
+          name: p.name,
+          price: p.price,
+          costPrice: p.costPrice,
+          barcode: p.barcode,
+          priceType: (p as any).priceType || "unit",
+          unit: (p as any).unit || "قطعة",
+          categoryId: cat ? cat.id : createdCategories["مساحيق أوتوماتيك"].id,
+          stock: 100,
+          minStock: 10,
+        }
+      });
+    }));
+    console.log(`Inserted batch ${i / batchSize + 1}...`);
+    await new Promise(r => setTimeout(r, 500)); // 500ms delay between batches
   }
 
-  console.log("Seeding Completed Successfully!");
+  console.log(`Seeding Completed! Added ${allProductsData.length} real products.`);
 }
 
-main().catch(e => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

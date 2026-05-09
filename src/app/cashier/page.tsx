@@ -280,7 +280,10 @@ export default function CashierPage() {
         cart.clearCart();
         toast.success("تم إتمام البيع بنجاح!");
 
-        // 4. Refresh products from server quietly in background (after 5 sec)
+        // 4. AUTO PRINT DIRECTLY
+        setTimeout(() => printReceipt(invoice), 500);
+
+        // 5. Refresh products from server quietly in background (after 5 sec)
         setTimeout(() => fetchProducts(), 5000);
       } else {
         const err = await res.json();
@@ -293,7 +296,42 @@ export default function CashierPage() {
     }
   };
 
-  const printReceipt = () => window.print();
+  const printReceipt = async (invoiceToPrint?: any) => {
+    const invoice = invoiceToPrint || lastInvoice;
+    if (!invoice) return;
+    
+    try {
+      const toastId = toast.loading("جاري إرسال الفاتورة للطابعة المباشرة...");
+      const res = await fetch("/api/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptData: {
+            invoiceNo: invoice.invoiceNo,
+            customerName: invoice.customer?.name,
+            total: invoice.total,
+            discount: invoice.discount,
+            finalTotal: invoice.finalTotal,
+            items: invoice.items.map((item: any) => ({
+              name: item.product?.name || "منتج",
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total
+            }))
+          }
+        })
+      });
+      if (res.ok) {
+        toast.success("تمت الطباعة المباشرة بنجاح", { id: toastId });
+      } else {
+        toast.error("فشل الطباعة المباشرة، جاري فتح نافذة المتصفح...", { id: toastId });
+        window.print();
+      }
+    } catch (err) {
+      toast.error("خطأ في خدمة الطباعة المباشرة");
+      window.print();
+    }
+  };
 
   useEffect(() => {
     let barcodeString = "";
@@ -659,46 +697,65 @@ export default function CashierPage() {
         </div>
       </div>
 
-      {/* Weight Input Modal */}
+      {/* Weight/Price Input Modal */}
       {weightInput && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 no-print backdrop-blur-sm">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm mx-4 shadow-2xl border border-slate-100">
-            <h3 className="font-black text-xl text-slate-900 mb-2">إدخال الوزن</h3>
-            <p className="text-slate-500 font-bold mb-5">
-              {products.find((p) => p.id === weightInput.productId)?.name}
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-100">
+            <h3 className="font-black text-xl text-slate-900 mb-2">تحديد الكمية المطلوبة</h3>
+            <p className="text-slate-500 font-bold mb-4">
+              الصنف: <span className="text-blue-600">{products.find((p) => p.id === weightInput.productId)?.name}</span>
             </p>
             
-            {/* Quick Weight Buttons */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "0.125" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">ثُمن كيلو</button>
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "0.250" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">ربع كيلو</button>
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "0.500" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">نصف كيلو</button>
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "0.750" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">كيلو إلا ربع</button>
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "1.000" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">كيلو</button>
-              <button onClick={() => setWeightInput({ ...weightInput, weight: "2.000" })} className="py-2.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold transition-colors">2 كيلو</button>
+            <div className="mb-6">
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">اختر القيمة بالجنيه (سريع):</label>
+              <div className="grid grid-cols-5 gap-2">
+                {[5, 10, 15, 20, 25, 30, 35, 40, 45, 50].map((egp) => (
+                  <button 
+                    key={egp}
+                    onClick={() => {
+                      const product = products.find((p) => p.id === weightInput.productId);
+                      if (product) {
+                        const calculatedWeight = (egp / product.price).toFixed(3);
+                        addToCart(product, parseFloat(calculatedWeight));
+                        toast.success(`تم إضافة ${calculatedWeight} ${product.unit} بقيمة ${egp} ج.م`);
+                        setWeightInput(null);
+                        barcodeRef.current?.focus();
+                      }
+                    }}
+                    className="py-3 rounded-xl border-2 border-emerald-100 bg-emerald-50 text-emerald-700 font-black text-lg hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all active:scale-95 shadow-sm"
+                  >
+                    {egp}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="relative mb-5">
-              <input
-                type="number"
-                step="0.001"
-                value={weightInput.weight}
-                onChange={(e) => setWeightInput({ ...weightInput, weight: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && handleWeightSubmit()}
-                placeholder="أو اكتب الوزن بالكيلو (مثال: 0.150)"
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3.5 text-lg font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                autoFocus
-              />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">كجم</div>
+            <div className="w-full h-px bg-slate-100 mb-6"></div>
+
+            <div className="mb-6">
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">أو ادخل الوزن يدوياً بالكيلو:</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.001"
+                  value={weightInput.weight}
+                  onChange={(e) => setWeightInput({ ...weightInput, weight: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && handleWeightSubmit()}
+                  placeholder="مثال: 0.5 (نصف كيلو)"
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 text-xl font-black text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                  autoFocus
+                />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm uppercase">كجم</div>
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={handleWeightSubmit} className="flex-1 py-3.5 bg-emerald-500 hover:bg-emerald-600 rounded-xl text-white font-bold transition-colors shadow-lg shadow-emerald-500/20">
-                إضافة للسلة
+            <div className="flex gap-4">
+              <button onClick={handleWeightSubmit} className="flex-[2] py-4 bg-blue-600 hover:bg-blue-700 rounded-2xl text-white font-black text-lg transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                تأكيد الكمية
               </button>
               <button
                 onClick={() => { setWeightInput(null); barcodeRef.current?.focus(); }}
-                className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold transition-colors"
+                className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 rounded-2xl text-slate-600 font-black transition-all active:scale-95"
               >
                 إلغاء
               </button>

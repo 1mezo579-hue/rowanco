@@ -37,6 +37,7 @@ export default function InventoryPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [barcodeQuery, setBarcodeQuery] = useState("");
   const [displayLimit, setDisplayLimit] = useState(100);
   const [activeTab, setActiveTab] = useState<"products" | "stock" | "categories">("products");
   
@@ -53,6 +54,7 @@ export default function InventoryPage() {
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -60,7 +62,12 @@ export default function InventoryPage() {
 
   const filteredProducts = useMemo(() => {
     let filtered = allProducts;
-    if (searchQuery.trim()) {
+    
+    // If there's a barcode query, filter strictly by barcode first
+    if (barcodeQuery.trim()) {
+      const b = barcodeQuery.trim();
+      filtered = filtered.filter(p => p.barcode?.includes(b));
+    } else if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(q) || 
@@ -68,7 +75,7 @@ export default function InventoryPage() {
       );
     }
     return filtered;
-  }, [allProducts, searchQuery]);
+  }, [allProducts, searchQuery, barcodeQuery]);
 
   const fetchData = async () => {
     try {
@@ -326,13 +333,42 @@ export default function InventoryPage() {
         {activeTab === "products" && (
           <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-white shadow-sm space-y-8 animate-fade-in">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-4 flex-1 w-full bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] px-6 py-4">
-                <Search className="w-6 h-6 text-cyan-500" />
-                <input type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setDisplayLimit(100); }}
-                  placeholder="ابحث بالاسم أو الباركود..." className="bg-transparent text-slate-800 focus:outline-none w-full font-bold text-lg" />
+              <div className="flex flex-col md:flex-row items-center gap-4 flex-1 w-full">
+                {/* البحث بالاسم */}
+                <div className="flex items-center gap-4 flex-1 w-full bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] px-6 py-4 focus-within:border-cyan-500 focus-within:bg-white transition-all shadow-sm">
+                  <Search className="w-6 h-6 text-cyan-500" />
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => { setSearchQuery(e.target.value); setBarcodeQuery(""); setDisplayLimit(100); }}
+                    placeholder="ابحث باسم المنتج..." 
+                    className="bg-transparent text-slate-800 focus:outline-none w-full font-bold text-lg" 
+                  />
+                </div>
+                
+                {/* البحث بالباركود */}
+                <div className="flex items-center gap-4 w-full md:w-[350px] bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] px-6 py-4 focus-within:border-teal-500 focus-within:bg-white transition-all shadow-sm group">
+                  <div className="flex items-center justify-center w-9 h-9 bg-teal-50 text-teal-600 rounded-xl group-focus-within:bg-teal-600 group-focus-within:text-white transition-all">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <input 
+                    ref={barcodeInputRef}
+                    type="text" 
+                    value={barcodeQuery} 
+                    onChange={(e) => { setBarcodeQuery(e.target.value); setSearchQuery(""); setDisplayLimit(100); }}
+                    placeholder="بحث سريع بالباركود..." 
+                    className="bg-transparent text-slate-800 focus:outline-none w-full font-bold text-lg" 
+                  />
+                  {barcodeQuery && (
+                    <button onClick={() => setBarcodeQuery("")} className="text-slate-400 hover:text-rose-500">
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               </div>
+
               <button onClick={() => { setEditingProduct(null); resetProductForm(); setShowProductForm(true); }}
-                className="flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-[1.5rem] transition-all shadow-lg text-[18px] font-black hover:-translate-y-1 w-full lg:w-auto">
+                className="flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-[1.5rem] transition-all shadow-lg text-[18px] font-black hover:-translate-y-1 hover:shadow-cyan-500/40 w-full lg:w-auto shrink-0">
                 <Plus className="w-6 h-6" />
                 إضافة صنف جديد
               </button>
@@ -352,7 +388,12 @@ export default function InventoryPage() {
                 <tbody className="divide-y divide-slate-50">
                   {filteredProducts.slice(0, displayLimit).map((product) => (
                     <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="py-5 px-6 font-black text-slate-800">{product.name}</td>
+                      <td className="py-5 px-6 font-black text-slate-800">
+                        {product.name}
+                        {product.barcode?.startsWith("LOOSE-") && (
+                          <span className="mr-2 px-3 py-1 bg-teal-100 text-teal-700 text-[10px] rounded-full uppercase font-black">منتج سايب</span>
+                        )}
+                      </td>
                       <td className="py-5 px-6 font-mono font-bold text-cyan-600">{product.barcode || "-"}</td>
                       <td className="py-5 px-6 font-black text-emerald-600 text-lg">{formatPrice(product.price)}</td>
                       <td className="py-5 px-6 font-black">{product.stock} {product.unit}</td>

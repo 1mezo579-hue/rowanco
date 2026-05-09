@@ -4,11 +4,11 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Optimized connection for Supabase pooler (pgbouncer)
+// Simple local connection for maximum speed
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    log: ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") {

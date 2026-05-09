@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query");
     const category = searchParams.get("category");
-    const limit = parseInt(searchParams.get("limit") || "10000");
+    const limit = parseInt(searchParams.get("limit") || "1000");
 
     const where: any = {};
     if (query) {
