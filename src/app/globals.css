@@ -105,16 +105,17 @@
   }
   .print-receipt, .print-receipt * {
     visibility: visible;
+    color: #000 !important; /* Force pure black to prevent faint/dithered printing */
+    font-weight: 900 !important; /* Force bold for thermal clarity */
   }
   .print-receipt {
     position: absolute;
     left: 0;
     top: 0;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 100% !important; /* Adapt to printer width (58mm or 80mm) */
+    max-width: 100% !important;
     margin: 0;
     padding: 0;
-    color: black !important;
     box-shadow: none !important;
     background: transparent !important;
     border: none !important;
@@ -123,7 +124,6 @@
     display: none !important;
   }
   @page {
-    size: 80mm auto;
     margin: 0;
   }
 }
