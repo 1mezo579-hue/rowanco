@@ -11,44 +11,48 @@ export async function POST(req: Request) {
     const { receiptData } = await req.json();
     
     // Create a text-based receipt content
-    const date = new Date().toLocaleString("ar-EG");
-    const content = `
-================================
-     روانكو للمنظفات (Rowanco)
-================================
-فاتورة رقم: ${receiptData.invoiceNo}
-التاريخ: ${date}
-العميل: ${receiptData.customerName || "عميل طياري"}
---------------------------------
-الصنف          الكمية   السعر   الإجمالي
---------------------------------
-${receiptData.items.map((item: any) => 
-  `${item.name.padEnd(15)} ${item.quantity.toString().padEnd(6)} ${item.price.toString().padEnd(6)} ${item.total}`
-).join("\n")}
---------------------------------
-المجموع: ${receiptData.total} ج.م
-الخصم: ${receiptData.discount} ج.م
-الإجمالي النهائي: ${receiptData.finalTotal} ج.م
---------------------------------
-شكراً لزيارتكم!
-روانكو - أفضل جودة وأقل سعر
-================================
-    `.trim();
+    // Strictly Arabic & Optimized for Thermal Printers
+    const date = new Date().toLocaleString("ar-EG", { hour12: true });
+    const content = [
+      "================================",
+      "       روانـكـو لـلـمـنـظـفـات",
+      "================================",
+      `رقم الفاتورة: ${receiptData.invoiceNo}`,
+      `التاريخ: ${date}`,
+      `العميل: ${receiptData.customerName || "عميل نقدي"}`,
+      "--------------------------------",
+      "الصنف          الكمية   السعر",
+      "--------------------------------",
+      ...receiptData.items.map((item: any) => {
+        const name = (item.name.length > 15 ? item.name.substring(0, 12) + ".." : item.name).padEnd(15);
+        const qty = item.quantity.toString().padEnd(7);
+        const price = item.price.toString();
+        return `${name} ${qty} ${price}`;
+      }),
+      "--------------------------------",
+      `المجموع: ${receiptData.total} ج.م`,
+      `الخصم: ${receiptData.discount} ج.م`,
+      `الإجمالي: ${receiptData.finalTotal} ج.م`,
+      "--------------------------------",
+      "      شكراً لزيارتكم!",
+      "   جودة توفر لك - روانكو",
+      "================================",
+      "\n\n\n"
+    ].join("\n");
 
     const tempDir = path.join(process.cwd(), "temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
     
     const tempFile = path.join(tempDir, `receipt_${receiptData.invoiceNo}.txt`);
-    fs.writeFileSync(tempFile, content, "utf8");
-
-    // PowerShell command to print to the default printer
-    // We use -Raw to ensure no extra formatting is added by PowerShell
-    await execAsync(`powershell -Command "Get-Content -Path '${tempFile}' | Out-Printer"`);
     
-    // Optionally delete after print
-    setTimeout(() => {
-      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
-    }, 5000);
+    // Write as UTF-16 Little Endian (Unicode) which Windows/PowerShell handles best for Arabic
+    fs.writeFileSync(tempFile, Buffer.from('\ufeff' + content, 'utf16le'));
+
+    // Print using PowerShell with explicit unicode handling
+    await execAsync(`powershell -Command "Get-Content -Path '${tempFile}' -Encoding Unicode | Out-Printer"`);
+    
+    // Auto-delete temp file
+    setTimeout(() => { if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile); }, 10000);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
