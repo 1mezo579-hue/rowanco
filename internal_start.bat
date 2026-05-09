@@ -9,10 +9,11 @@ start "Rowanco Server" cmd /c "npm run dev"
 timeout /t 6 /nobreak >nul
 
 :: Step 3: Launch Google Chrome in Silent Kiosk Printing Mode!
-start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --kiosk-printing http://localhost:3000/cashier
+:: We MUST use a separate user-data-dir, otherwise Chrome ignores the kiosk flag if it's already open in the background!
+start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="C:\Chrome_POS" --kiosk --kiosk-printing http://localhost:3000/cashier
 
 :: If Chrome is not in Program Files, try x86
-start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --kiosk --kiosk-printing http://localhost:3000/cashier
+start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --user-data-dir="C:\Chrome_POS" --kiosk --kiosk-printing http://localhost:3000/cashier
 
 exit
 
