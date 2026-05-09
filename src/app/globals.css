@@ -108,15 +108,15 @@
     left: 0;
     top: 0;
     width: 80mm;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 12px;
-    padding: 0;
     margin: 0;
+    padding: 10px;
+    color: black;
   }
   .no-print {
     display: none !important;
   }
   @page {
+    size: 80mm auto;
     margin: 0;
   }
 }

@@ -313,34 +313,12 @@ export default function CashierPage() {
     const invoice = invoiceToPrint || lastInvoice;
     if (!invoice) return;
     
-    try {
-      const res = await fetch("/api/print", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receiptData: {
-            invoiceNo: invoice.invoiceNo,
-            customerName: invoice.customer?.name,
-            total: invoice.total,
-            discount: invoice.discount,
-            finalTotal: invoice.finalTotal,
-            items: invoice.items.map((item: any) => ({
-              name: item.product?.name || "منتج",
-              quantity: item.quantity,
-              price: item.price,
-              total: item.total
-            }))
-          }
-        })
-      });
-      if (!res.ok) {
-        window.print();
-      }
-    } catch (err) {
-      toast.error("خطأ في خدمة الطباعة المباشرة");
+    // We rely on CSS @page { size: 80mm auto } and Kiosk Mode for true silent printing
+    setTimeout(() => {
       window.print();
-    }
+    }, 100);
   };
+
 
   useEffect(() => {
     let barcodeString = "";
