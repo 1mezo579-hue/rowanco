@@ -40,6 +40,11 @@ export async function POST(req: Request) {
       "\n\n\n"
     ].join("\n");
 
+    // Only attempt direct printing on Windows (Local Machine)
+    if (process.platform !== "win32") {
+      return NextResponse.json({ error: "Direct printing only supported on local Windows machine" }, { status: 400 });
+    }
+
     const tempDir = path.join(process.cwd(), "temp");
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
     
@@ -57,6 +62,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Printing Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "فشل في خدمة الطباعة المباشرة" }, { status: 500 });
   }
 }
