@@ -4,10 +4,15 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Simple local connection for maximum speed
+// Optimized for speed and cloud sync
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_URL_NON_POOLING,
+      },
+    },
     log: ["error"],
   });
 

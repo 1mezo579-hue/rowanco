@@ -61,18 +61,31 @@ export default function CashierPage() {
     } catch {}
   };
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
+  const fetchProducts = async (quiet = false) => {
+    if (!quiet) setIsLoading(true);
     try {
-      const res = await fetch(`/api/products?limit=10000`, { cache: "no-store" });
-      if (!res.ok) throw new Error();
+      // Try to load from cache first for instant speed
+      const cached = localStorage.getItem("rowanco_products_cache");
+      if (cached && !quiet) {
+        const parsed = JSON.parse(cached);
+        setAllProducts(parsed);
+        setProducts(parsed);
+      }
+
+      const res = await fetch(`/api/products?limit=2000`, { cache: "no-store" });
       const data = await res.json();
-      setAllProducts(Array.isArray(data) ? data : []);
-      setProducts(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        setAllProducts(data);
+        localStorage.setItem("rowanco_products_cache", JSON.stringify(data));
+        // Only update visible products if not currently searching
+        if (!searchQuery.trim() && selectedCategory === "all") {
+          setProducts(data);
+        }
+      }
     } catch {
-      toast.error("فشل في تحميل المنتجات");
+      toast.error("فشل تحديث البيانات من السيرفر");
     } finally {
-      setIsLoading(false);
+      if (!quiet) setIsLoading(false);
     }
   };
 
