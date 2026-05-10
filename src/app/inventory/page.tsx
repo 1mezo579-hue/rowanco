@@ -488,9 +488,10 @@ function ProductModal({ editingProduct, productForm, setProductForm, categories,
             <option value="">اختر القسم</option>
             {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <input type="number" value={productForm.price} onChange={(e) => setProductForm({...productForm, price: e.target.value})} placeholder="سعر البيع" className="p-4 bg-slate-50 rounded-xl font-black text-emerald-600" />
             <input type="number" value={productForm.costPrice} onChange={(e) => setProductForm({...productForm, costPrice: e.target.value})} placeholder="سعر الشراء" className="p-4 bg-slate-50 rounded-xl font-bold" />
+            <input type="number" value={productForm.stock} onChange={(e) => setProductForm({...productForm, stock: e.target.value})} placeholder="الكمية الحالية" className="p-4 bg-slate-50 rounded-xl font-bold text-cyan-600" />
           </div>
           <button onClick={onSave} className="w-full py-5 bg-cyan-600 text-white rounded-2xl font-black text-xl shadow-lg">حفظ المنتج</button>
         </div>
