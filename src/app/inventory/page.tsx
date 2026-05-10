@@ -474,35 +474,25 @@ function CategoriesManager({ categories, fetchCategories }: any) {
 }
 
 function ProductModal({ editingProduct, productForm, setProductForm, categories, onSave, onClose }: any) {
-  const [isLookingUp, setIsLookingUp] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const priceRef = useRef<HTMLInputElement>(null);
+  const stockRef = useRef<HTMLInputElement>(null);
+  const saveBtnRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const code = productForm.barcode?.trim();
-    // Only auto-lookup if we are adding a new product, name is empty, and barcode is at least 8 chars
-    if (code && code.length >= 8 && !productForm.name && !editingProduct) {
-      const lookupBarcode = async () => {
-        setIsLookingUp(true);
-        try {
-          const res = await fetch(`/api/barcode-lookup?code=${code}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.name) {
-              setProductForm((prev: any) => ({ ...prev, name: data.name }));
-              toast.success("تم جلب اسم المنتج تلقائياً من الباركود");
-            }
-          }
-        } catch (error) {
-          console.error("Barcode lookup failed", error);
-        } finally {
-          setIsLookingUp(false);
-        }
-      };
-
-      // Debounce to wait for scanner to finish "typing"
-      const timeoutId = setTimeout(lookupBarcode, 500);
-      return () => clearTimeout(timeoutId);
+  // Fast Keyboard Flow: Barcode Scanner sends "Enter" automatically
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef: React.RefObject<HTMLElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nextRef.current?.focus();
     }
-  }, [productForm.barcode, productForm.name, editingProduct, setProductForm]);
+  };
+
+  const handleStockKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveBtnRef.current?.click();
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
@@ -516,32 +506,57 @@ function ProductModal({ editingProduct, productForm, setProductForm, categories,
             type="text" 
             value={productForm.barcode} 
             onChange={(e) => setProductForm({...productForm, barcode: e.target.value})} 
-            placeholder="الباركود (قم بعمل سكان هنا أولاً)" 
+            onKeyDown={(e) => handleKeyDown(e, nameRef)}
+            placeholder="الباركود (سكان هنا وسينتقل للاسم تلقائياً)" 
             className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-mono text-lg transition-all shadow-inner" 
             autoFocus 
           />
-          <div className="relative">
-            <input 
-              type="text" 
-              value={productForm.name} 
-              onChange={(e) => setProductForm({...productForm, name: e.target.value})} 
-              placeholder="اسم المنتج" 
-              className={`w-full p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-bold transition-all ${isLookingUp ? 'opacity-50' : ''}`} 
-              disabled={isLookingUp}
-            />
-            {isLookingUp && <div className="absolute left-4 top-4 w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />}
-          </div>
+          <input 
+            ref={nameRef}
+            type="text" 
+            value={productForm.name} 
+            onChange={(e) => setProductForm({...productForm, name: e.target.value})} 
+            onKeyDown={(e) => handleKeyDown(e, priceRef)}
+            placeholder="اسم المنتج (اضغط انتر للانتقال للسعر)" 
+            className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-bold transition-all" 
+          />
           <select value={productForm.categoryId} onChange={(e) => setProductForm({...productForm, categoryId: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-bold transition-all">
-            <option value="">اختر القسم</option>
+            <option value="">اختر القسم (اختياري الآن)</option>
             {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="grid grid-cols-3 gap-4">
-            <input type="number" value={productForm.price} onChange={(e) => setProductForm({...productForm, price: e.target.value})} placeholder="سعر البيع" className="p-4 bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl font-black text-emerald-600 transition-all" />
-            <input type="number" value={productForm.costPrice} onChange={(e) => setProductForm({...productForm, costPrice: e.target.value})} placeholder="سعر الشراء" className="p-4 bg-slate-50 border-2 border-transparent focus:border-slate-300 rounded-xl font-bold transition-all" />
-            <input type="number" value={productForm.stock} onChange={(e) => setProductForm({...productForm, stock: e.target.value})} placeholder="الكمية الحالية" className="p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-bold text-cyan-600 transition-all" />
+            <input 
+              ref={priceRef}
+              type="number" 
+              value={productForm.price} 
+              onChange={(e) => setProductForm({...productForm, price: e.target.value})} 
+              onKeyDown={(e) => handleKeyDown(e, stockRef)}
+              placeholder="سعر البيع" 
+              className="p-4 bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl font-black text-emerald-600 transition-all" 
+            />
+            <input 
+              type="number" 
+              value={productForm.costPrice} 
+              onChange={(e) => setProductForm({...productForm, costPrice: e.target.value})} 
+              placeholder="سعر الشراء" 
+              className="p-4 bg-slate-50 border-2 border-transparent focus:border-slate-300 rounded-xl font-bold transition-all" 
+            />
+            <input 
+              ref={stockRef}
+              type="number" 
+              value={productForm.stock} 
+              onChange={(e) => setProductForm({...productForm, stock: e.target.value})} 
+              onKeyDown={handleStockKeyDown}
+              placeholder="الكمية" 
+              className="p-4 bg-slate-50 border-2 border-transparent focus:border-cyan-500 rounded-xl font-bold text-cyan-600 transition-all" 
+            />
           </div>
-          <button onClick={onSave} className="w-full py-5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-2xl font-black text-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
-            حفظ المنتج
+          <button 
+            ref={saveBtnRef}
+            onClick={onSave} 
+            className="w-full py-5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-2xl font-black text-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+          >
+            حفظ المنتج (Enter)
           </button>
         </div>
       </div>
