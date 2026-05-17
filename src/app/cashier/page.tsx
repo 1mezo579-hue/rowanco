@@ -649,18 +649,46 @@ export default function CashierPage() {
                   <span className="text-slate-900">{formatPrice(cart.getDeliveryFee())}</span>
                 </div>
               )}
-              <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                  <Percent className="w-4 h-4 text-slate-500" />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-rose-500 transition-all">
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                    <Percent className="w-4 h-4 text-rose-500" />
+                  </div>
+                  <input
+                    type="number"
+                    value={cart.discount === 0 ? "" : cart.discount}
+                    onChange={(e) => cart.setDiscount(Math.max(0, Number(e.target.value)))}
+                    placeholder="خصم مباشر بالجنيه..."
+                    className="bg-transparent border-none outline-none text-slate-900 font-black flex-1 text-lg placeholder:text-slate-400 placeholder:font-normal"
+                  />
+                  <span className="text-sm font-bold text-slate-500 pl-2">ج.م</span>
                 </div>
-                <input
-                  type="number"
-                  value={cart.discount}
-                  onChange={(e) => cart.setDiscount(Number(e.target.value))}
-                  placeholder="أضف خصم..."
-                  className="bg-transparent border-none outline-none text-slate-900 font-bold flex-1"
-                />
-                <span className="text-sm font-bold text-slate-500 pl-2">ج.م</span>
+                {/* Preset Discount Buttons */}
+                <div className="flex flex-wrap gap-1.5 mt-0.5">
+                  {[5, 10, 15, 20, 50].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => cart.setDiscount(val)}
+                      type="button"
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${
+                        cart.discount === val
+                          ? "bg-rose-500 text-white border-rose-500 shadow-sm"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {val} ج.م
+                    </button>
+                  ))}
+                  {cart.discount > 0 && (
+                    <button
+                      onClick={() => cart.setDiscount(0)}
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg text-xs font-black bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-all mr-auto"
+                    >
+                      إلغاء الخصم
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between text-2xl font-black bg-blue-50 p-4 rounded-2xl border border-blue-200 text-blue-700">
                 <span>الإجمالي:</span>
@@ -785,9 +813,46 @@ export default function CashierPage() {
                   <span className="font-bold text-gray-900">{formatPrice(cart.getDeliveryFee())}</span>
                 </div>
               )}
-              <div className="flex justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-500">الخصم:</span>
-                <span className="font-bold text-red-500">-{formatPrice(cart.discount)}</span>
+              <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-rose-700 font-bold flex items-center gap-1">
+                    <Percent className="w-4 h-4" />
+                    الخصم (ج.م):
+                  </span>
+                  <span className="font-black text-rose-600 text-lg">-{formatPrice(cart.discount)}</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    type="number"
+                    value={cart.discount === 0 ? "" : cart.discount}
+                    onChange={(e) => cart.setDiscount(Math.max(0, Number(e.target.value)))}
+                    placeholder="تعديل الخصم بالجنيه..."
+                    className="w-full bg-white border border-rose-200 rounded-lg px-3 py-2 text-sm font-bold text-rose-700 focus:ring-2 focus:ring-rose-500 outline-none transition-all shadow-sm"
+                  />
+                  {[5, 10, 20].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => cart.setDiscount(val)}
+                      type="button"
+                      className={`px-3 py-2 text-xs font-black rounded-lg border transition-all whitespace-nowrap shadow-sm ${
+                        cart.discount === val
+                          ? "bg-rose-500 text-white border-rose-500"
+                          : "bg-white text-rose-600 border-rose-200 hover:bg-rose-50"
+                      }`}
+                    >
+                      {val}ج
+                    </button>
+                  ))}
+                  {cart.discount > 0 && (
+                    <button
+                      onClick={() => cart.setDiscount(0)}
+                      type="button"
+                      className="px-2.5 py-2 text-xs font-black bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg border border-rose-200 transition-all"
+                    >
+                      حذف
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl">
                 <span className="font-bold text-blue-700">الإجمالي:</span>
